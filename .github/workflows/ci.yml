@@ -1,0 +1,53 @@
+name: Java2Bedrock Converter CI
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      java_pack_url:
+        description: 'Java Resource Pack URL'
+        required: true
+      merge_pack:
+        description: 'Bedrock Pack to merge with (optional)'
+        required: false
+      show_warning:
+        description: 'Show warning prompt (true/false)'
+        required: false
+        default: 'false'
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y moreutils jq imagemagick unzip zip nodejs npm uuid-runtime
+          npm install -g spritesheet-js
+
+      - name: Download Java resource pack
+        if: ${{ github.event.inputs.java_pack_url }}
+        run: |
+          wget -O java_pack.zip "${{ github.event.inputs.java_pack_url }}"
+
+      - name: Run Converter
+        run: |
+          chmod +x converter.sh
+          ./converter.sh java_pack.zip \
+            -w "${{ github.event.inputs.show_warning }}" \
+            ${MERGE_PACK:+-m "${{ github.event.inputs.merge_pack }}"} \
+            -a "entity_alphatest_one_sided" \
+            -b "alpha_test" \
+            -f "null" \
+            -v "1.18.2"
+
+      - name: Upload converted pack
+        uses: actions/upload-artifact@v3
+        with:
+          name: bedrock-converted-pack
+          path: ./output/
